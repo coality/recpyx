@@ -300,9 +300,21 @@ def fr_to_en_rule(fr_rule: str) -> str:
 
 def parse_schedule(fr_text: str, default_tz: str = "Europe/Paris") -> en.IRSchedule:
     en_text = fr_to_en_rule(fr_text)
-    return en.parse_schedule(en_text, default_tz=default_tz)
+    try:
+        return en.parse_schedule(en_text, default_tz=default_tz)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg.startswith("Unsupported rule:"):
+            raise ValueError(f"Unsupported rule: {fr_text!r}") from exc
+        raise
 
 
 def parse_rule(fr_text: str) -> en.IRRule:
     en_text = fr_to_en_rule(fr_text)
-    return en.parse_rule(en_text)
+    try:
+        return en.parse_rule(en_text)
+    except ValueError as exc:
+        msg = str(exc)
+        if msg.startswith("Unsupported rule:"):
+            raise ValueError(f"Unsupported rule: {fr_text!r}") from exc
+        raise
