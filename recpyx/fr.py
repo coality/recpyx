@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
 
-import en_impl
+from . import en
 
 # FR -> IR.
 # Strategy: normalize French surface forms into the supported EN grammar,
@@ -299,11 +298,11 @@ def fr_to_en_rule(fr_rule: str) -> str:
     return s
 
 
-def parse_schedule(fr_text: str, default_tz: str = "Europe/Paris") -> en_impl.ScheduleSpec:
-    en = fr_to_en_rule(fr_text)
-    return en_impl.parse_schedule(en, default_tz=default_tz)
+def parse_schedule(fr_text: str, default_tz: str = "Europe/Paris") -> en.IRSchedule:
+    en_text = fr_to_en_rule(fr_text)
+    return en.parse_schedule(en_text, default_tz=default_tz)
 
 
-def parse_rule(fr_text: str) -> en_impl.RuleSpec:
-    en = fr_to_en_rule(fr_text)
-    return en_impl.parse_rule(en)
+def parse_rule(fr_text: str) -> en.IRRule:
+    en_text = fr_to_en_rule(fr_text)
+    return en.parse_rule(en_text)
