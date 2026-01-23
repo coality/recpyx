@@ -4,7 +4,6 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from recpyx.engine import InvalidRuleError, next_occurrence, validate
-from recpyx.fr import fr_to_en_rule
 
 TZ = "Europe/Paris"
 NOW = datetime(2026, 3, 12, 12, 0, 0, tzinfo=ZoneInfo(TZ))
@@ -379,5 +378,4 @@ def test_next_occurrence_invalid_rule(rule: str) -> None:
 
 @pytest.mark.parametrize("rule, expected_prefix", CASES_FR, ids=[case[0] for case in CASES_FR])
 def test_next_occurrence_rule_fr(rule: str, expected_prefix: str) -> None:
-    en_rule = fr_to_en_rule(rule)
-    _assert_next_occurrence(en_rule, expected_prefix)
+    _assert_next_occurrence(rule, expected_prefix)

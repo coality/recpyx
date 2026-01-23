@@ -22,10 +22,8 @@ from dateutil.rrule import (
     MO, TU, WE, TH, FR, SA, SU,
 )
 
-from .en import (
-    parse_schedule,
-    IRSchedule, IRRule, IRWindowDate, IRBetweenTime, IRStep,
-)
+from .parser import parse_schedule
+from .en import IRSchedule, IRRule, IRWindowDate, IRBetweenTime, IRStep
 
 class InvalidRuleError(ValueError):
     pass
