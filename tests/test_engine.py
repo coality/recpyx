@@ -3,7 +3,8 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from recpyx.engine import InvalidRuleError, next_occurrence, validate
+import recpyx.engine as engine
+from recpyx import InvalidRuleError, next_occurrence, validate
 
 TZ = "Europe/Paris"
 NOW = datetime(2026, 3, 12, 12, 0, 0, tzinfo=ZoneInfo(TZ))
@@ -352,10 +353,19 @@ INVALID_RULES = [
     "every day at 18:00 between 2026-03-12 and 2026-03-12 except 2026-03-12",
 ]
 
+@pytest.fixture(autouse=True)
+def _freeze_now(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return NOW
+
+    monkeypatch.setattr(engine, "datetime", FixedDateTime)
+
 
 def _assert_next_occurrence(rule: str, expected_prefix: str, now: datetime = NOW, tz: str = TZ) -> None:
-    validate(rule, now=now, default_tz=tz)
-    got = next_occurrence(rule, now=now, default_tz=tz)
+    validate(rule)
+    got = next_occurrence(rule)
     got_local = got.astimezone(ZoneInfo(tz)).replace(tzinfo=None).isoformat()
     assert got_local.startswith(expected_prefix), (
         f"\nRule: {rule}\nNow:  {now.isoformat()}\nGot:  {got.isoformat()} (local={got_local})\nExp:  {expected_prefix}..."
@@ -373,7 +383,7 @@ def test_next_occurrence_rule_en(rule: str, expected_prefix: str) -> None:
 @pytest.mark.parametrize("rule", INVALID_RULES, ids=INVALID_RULES)
 def test_next_occurrence_invalid_rule(rule: str) -> None:
     with pytest.raises(InvalidRuleError):
-        validate(rule, now=NOW, default_tz=TZ)
+        validate(rule)
 
 
 @pytest.mark.parametrize("rule, expected_prefix", CASES_FR, ids=[case[0] for case in CASES_FR])
