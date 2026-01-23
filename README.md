@@ -5,6 +5,7 @@ next-occurrence datetimes. It ships with:
 
 - An English parser that converts supported rules into an Intermediate Representation (IR).
 - A French normalization layer that converts FR rules into the supported English grammar before parsing.
+- An automatic language detector that routes English/French rules to the right parser.
 - A scheduling engine that computes the next valid occurrence, including time zones, exceptions, and
   date windows.
 
@@ -15,6 +16,7 @@ language system. The rule sets below document exactly what is accepted today and
 
 - Parse English recurrence rules into an intermediate representation (IR).
 - Parse French rules by normalizing them into English grammar.
+- Automatically detect English vs. French rules in the public API.
 - Compute the next occurrence with time zone handling, exceptions, and date/time windows.
 - Validate rules by checking that an occurrence exists within a reasonable horizon.
 
@@ -26,6 +28,7 @@ recpyx/
   engine.py        # Scheduling engine
   en.py            # English parser (EN -> IR)
   fr.py            # French normalization (FR -> EN -> IR)
+  parser.py        # Language detection + routing to EN/FR parser
 tests/
   test_engine.py   # Regression coverage for rule parsing + engine
 ```
@@ -34,13 +37,27 @@ tests/
 
 This project depends on `python-dateutil` for the recurrence engine.
 
+### Create a virtual environment (venv)
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+On Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.\\.venv\\Scripts\\Activate.ps1
+```
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-### English rules
+### English rules (automatic detection)
 
 ```python
 from recpyx import next_occurrence, validate
@@ -50,13 +67,14 @@ validate(rule)
 print(next_occurrence(rule))
 ```
 
-### French rules
+### French rules (automatic detection)
 
 ```python
-from recpyx import parse_schedule_fr
+from recpyx import next_occurrence, validate
 
-schedule = parse_schedule_fr("tous les jours ouvrés à 09h00")
-print(schedule)
+rule = "tous les jours ouvrés à 09h00"
+validate(rule)
+print(next_occurrence(rule))
 ```
 
 ### Exceptions and windows
@@ -66,6 +84,17 @@ from recpyx import next_occurrence
 
 rule = "every day at 10:00 except 2026-03-13"
 print(next_occurrence(rule))
+```
+
+### Explicit parser usage (optional)
+
+If you prefer to bypass auto-detection, you can call the language-specific parsers directly.
+
+```python
+from recpyx import parse_schedule_en, parse_schedule_fr
+
+print(parse_schedule_en("every weekday at 09:00"))
+print(parse_schedule_fr("tous les jours ouvrés à 09h00"))
 ```
 
 ## Intermediate Representation (IR) Specification (v1)
