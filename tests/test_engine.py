@@ -2,6 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from recpyx.engine import InvalidRuleError, next_occurrence, validate
+from recpyx.fr import fr_to_en_rule
 
 
 def test_next_occurrence_cases() -> None:
@@ -217,3 +218,137 @@ def test_next_occurrence_cases() -> None:
             raise AssertionError(f"Expected InvalidRuleError for: {rule}")
         except InvalidRuleError:
             pass
+
+
+def test_next_occurrence_cases_fr() -> None:
+    tz = "Europe/Paris"
+    now = datetime(2026, 3, 12, 12, 0, 0, tzinfo=ZoneInfo(tz))
+
+    cases_fr = [
+        ("tous les dimanches à 10h", "2026-03-15T10:00:00"),
+        ("tous les jours à 15h", "2026-03-12T15:00:00"),
+        ("tous les jours sauf le mercredi à 10h", "2026-03-13T10:00:00"),
+        ("tous les 2 jours à 10h00", "2026-03-14T10:00:00"),
+        ("toutes les 3 semaines le lundi à 08h30", "2026-03-30T08:30:00"),
+        ("tous les lundis et jeudis à 18h00", "2026-03-12T18:00:00"),
+        ("tous les jours ouvrés à 09h00", "2026-03-13T09:00:00"),
+        ("tous les jours à 09h00 et 18h00", "2026-03-12T18:00:00"),
+        ("tous les samedis à 10h00, 14h00, 18h00", "2026-03-14T10:00:00"),
+        ("tous les jours, toutes les 2 heures entre 09h00 et 17h00", "2026-03-12T13:00:00"),
+        ("tous les jours ouvrés, toutes les 2 heures entre 09h00 et 17h00", "2026-03-12T13:00:00"),
+        ("toutes les 2 heures entre 09h00 et 17h00", "2026-03-12T14:00:00"),
+        ("toutes les heures entre 18h00 et 23h00", "2026-03-12T18:00:00"),
+        ("tous les jours ouvrés à 15h00 entre le 2026-02-01 et le 2026-03-31", "2026-03-12T15:00:00"),
+        ("tous les jours à 10h00 jusqu'au 2026-12-31", "2026-03-13T10:00:00"),
+        ("tous les mois le 1er à 09h00", "2026-04-01T09:00:00"),
+        ("tous les mois le dernier jour à 20h00", "2026-03-31T20:00:00"),
+        ("tous les mois le 2 et le 15 à 08h00", "2026-03-15T08:00:00"),
+        ("tous les mois le 15 à 08h00", "2026-03-15T08:00:00"),
+        ("tous les mois le 31 à 20h00", "2026-03-31T20:00:00"),
+        ("tous les mois le premier lundi à 09h00", "2026-04-06T09:00:00"),
+        ("tous les mois le dernier vendredi à 18h00", "2026-03-27T18:00:00"),
+        ("tous les jours à 10h00 sauf le 2026-03-13", "2026-03-14T10:00:00"),
+        ("tous les jours à 10h00 sauf le 2026-12-25 et le 2026-01-01", "2026-03-13T10:00:00"),
+        ("tous les jours ouvrés sauf le vendredi à 09h00", "2026-03-16T09:00:00"),
+        ("tous les jours sauf le mercredi et le dimanche à 10h00", "2026-03-13T10:00:00"),
+        ("tous les jours ouvrés à 09h00, et tous les samedis à 10h30", "2026-03-13T09:00:00"),
+        ("tous les jours à 18h00, et le 2026-03-13 à 02h00", "2026-03-12T18:00:00"),
+        (
+            "tous les mois le 1er à 09h00 entre le 2026-08-01 et le 2026-08-31, si week-end alors lundi suivant",
+            "2026-08-03T09:00:00",
+        ),
+        (
+            "tous les mois le 1er à 09h00 entre le 2026-08-01 et le 2026-08-31, si week-end alors prochain jour ouvré",
+            "2026-08-03T09:00:00",
+        ),
+        ("tous les jours à 10h00 (Europe/Paris)", "2026-03-13T10:00:00"),
+        ("tous les jours à 10h00 (America/New_York)", "2026-03-13T10:00:00"),
+        ("le 2026-03-13 à 02h00", "2026-03-13T02:00:00"),
+        ("tous les ans le 03-14 à 10h00", "2026-03-14T10:00:00"),
+        ("tous les ans le 03-01 à 10h00", "2027-03-01T10:00:00"),
+        ("tous les jours sauf le jeudi à 18h00", "2026-03-13T18:00:00"),
+        ("tous les jours sauf le vendredi à 18h00", "2026-03-12T18:00:00"),
+        ("tous les jours ouvrés sauf le jeudi à 15h00", "2026-03-13T15:00:00"),
+        ("tous les lundis et jeudis à 18h00 sauf le jeudi", "2026-03-16T18:00:00"),
+        ("tous les jours à 18h00 sauf le jeudi", "2026-03-13T18:00:00"),
+        ("tous les jours ouvrés à 09h00 sauf le vendredi", "2026-03-16T09:00:00"),
+        ("tous les jours à 10h00 sauf le 2026-03-13 et le 2026-03-14", "2026-03-15T10:00:00"),
+        ("tous les dimanches à 10h00 sauf le 2026-03-15", "2026-03-22T10:00:00"),
+        ("tous les jours sauf le vendredi et sauf le 2026-03-15 à 10h00", "2026-03-14T10:00:00"),
+        ("tous les jours ouvrés sauf le vendredi et sauf le 2026-03-16 à 09h00", "2026-03-17T09:00:00"),
+        ("tous les jours, toutes les 2 heures entre 09h00 et 17h00 sauf le jeudi", "2026-03-13T09:00:00"),
+        ("tous les jours, toutes les 2 heures entre 09h00 et 17h00 sauf le vendredi", "2026-03-12T13:00:00"),
+        ("toutes les 2 heures entre 09h00 et 17h00 sauf le jeudi", "2026-03-13T10:00:00"),
+        ("toutes les heures entre 18h00 et 23h00 sauf le jeudi", "2026-03-13T18:00:00"),
+        ("tous les jours à 18h00 jusqu'au 2026-03-13 sauf le 2026-03-12", "2026-03-13T18:00:00"),
+        ("tous les jours à 18h00 entre le 2026-03-12 et le 2026-03-13 sauf le 2026-03-12", "2026-03-13T18:00:00"),
+        ("tous les jours à 18h00 sauf le jeudi, et le 2026-03-13 à 02h00", "2026-03-13T02:00:00"),
+        ("tous les jours à 18h00 sauf le vendredi, et le 2026-03-13 à 02h00", "2026-03-12T18:00:00"),
+        ("tous les mois le 15 à 08h00 sauf le 2026-03-15", "2026-04-15T08:00:00"),
+        ("tous les mois le dernier jour à 20h00 sauf le 2026-03-31", "2026-04-30T20:00:00"),
+        ("tous les mois le premier lundi à 09h00 sauf le 2026-04-06", "2026-05-04T09:00:00"),
+        ("tous les jours à 12h01", "2026-03-12T12:01:00"),
+        ("tous les jours à 12h00", "2026-03-13T12:00:00"),
+        ("tous les jours à 11h00, 12h30, 23h00", "2026-03-12T12:30:00"),
+        ("tous les jours sauf le jeudi à 12h30", "2026-03-13T12:30:00"),
+        ("tous les jours sauf le jeudi et le vendredi, sauf le 2026-03-12 à 18h00", "2026-03-14T18:00:00"),
+        ("tous les jours à 18h00 sauf le vendredi", "2026-03-12T18:00:00"),
+        ("tous les jours sauf le vendredi et sauf le 2026-03-15 à 18h00", "2026-03-12T18:00:00"),
+        ("tous les jours sauf le jeudi à 18h00 entre le 2026-03-12 et le 2026-03-20", "2026-03-13T18:00:00"),
+        ("tous les jours à 18h00 entre le 2026-03-12 et le 2026-03-15 sauf le 2026-03-12 et le 2026-03-13", "2026-03-14T18:00:00"),
+        ("tous les jours ouvrés à 12h30", "2026-03-12T12:30:00"),
+        ("tous les jours ouvrés à 13h00 sauf le jeudi", "2026-03-13T13:00:00"),
+        ("tous les jours ouvrés à 13h00 sauf le vendredi", "2026-03-12T13:00:00"),
+        ("tous les jours ouvrés à 09h00 sauf le jeudi", "2026-03-13T09:00:00"),
+        ("tous les jours ouvrés à 09h00 sauf le vendredi", "2026-03-16T09:00:00"),
+        ("tous les jours ouvrés à 15h30 entre le 2026-03-01 et le 2026-03-31 sauf le jeudi", "2026-03-13T15:30:00"),
+        ("tous les jours ouvrés à 15h30 jusqu'au 2026-03-20 sauf le 2026-03-13", "2026-03-12T15:30:00"),
+        ("tous les jours ouvrés à 15h30 jusqu'au 2026-03-20 sauf le jeudi", "2026-03-13T15:30:00"),
+        ("tous les jours ouvrés à 09h00 entre le 2026-03-12 et le 2026-03-16 sauf le 2026-03-13", "2026-03-16T09:00:00"),
+        ("tous les jours ouvrés à 09h00 entre le 2026-03-12 et le 2026-03-16 sauf le vendredi", "2026-03-16T09:00:00"),
+        ("tous les jours, toutes les 30 minutes entre 12h00 et 14h00", "2026-03-12T12:30:00"),
+        ("tous les jours, toutes les 30 minutes entre 12h00 et 14h00 sauf le jeudi", "2026-03-13T12:00:00"),
+        ("tous les jours ouvrés, toutes les 30 minutes entre 12h00 et 14h00", "2026-03-12T12:30:00"),
+        ("tous les jours ouvrés, toutes les 30 minutes entre 12h00 et 14h00 sauf le jeudi", "2026-03-13T12:00:00"),
+        ("tous les jours ouvrés, toutes les 90 minutes entre 08h00 et 12h00 sauf le vendredi", "2026-03-16T08:00:00"),
+        ("tous les jours, toutes les 2 heures entre 09h00 et 17h00 sauf le 2026-03-13", "2026-03-12T13:00:00"),
+        ("tous les jours, toutes les 2 heures entre 09h00 et 17h00 entre le 2026-03-12 et le 2026-03-14 sauf le 2026-03-13", "2026-03-12T13:00:00"),
+        ("tous les jours ouvrés, toutes les 2 heures entre 09h00 et 17h00 entre le 2026-03-12 et le 2026-03-14 sauf le jeudi", "2026-03-13T09:00:00"),
+        ("tous les jours ouvrés, toutes les 2 heures entre 09h00 et 17h00 entre le 2026-03-12 et le 2026-03-14 sauf le vendredi", "2026-03-12T13:00:00"),
+        ("toutes les 3 heures entre 08h00 et 23h00", "2026-03-12T15:00:00"),
+        ("toutes les 4 heures entre 01h00 et 23h00 sauf le jeudi", "2026-03-13T04:00:00"),
+        ("toutes les heures entre 12h00 et 14h00", "2026-03-12T13:00:00"),
+        ("toutes les heures entre 12h00 et 14h00 sauf le jeudi", "2026-03-13T12:00:00"),
+        ("toutes les 6 heures entre 00h00 et 23h00", "2026-03-12T18:00:00"),
+        ("toutes les 15 minutes", "2026-03-12T12:15:00"),
+        ("toutes les 45 minutes", "2026-03-12T12:45:00"),
+        ("toutes les 6 heures", "2026-03-12T18:00:00"),
+        ("toutes les 6 heures sauf le jeudi", "2026-03-13T00:00:00"),
+        ("tous les mois le 12 à 12h30", "2026-03-12T12:30:00"),
+        ("tous les mois le 12 à 18h00", "2026-03-12T18:00:00"),
+        ("tous les mois le 13 à 10h00", "2026-03-13T10:00:00"),
+        ("tous les mois le 31 à 20h00 sauf le 2026-03-31", "2026-05-31T20:00:00"),
+        ("tous les mois le dernier jour à 20h00 sauf le 2026-03-31", "2026-04-30T20:00:00"),
+        ("tous les mois le 12 et le 14 à 18h00", "2026-03-12T18:00:00"),
+        ("tous les mois le 31 à 20h00 sauf le 2026-03-31 et le 2026-05-31", "2026-07-31T20:00:00"),
+        ("tous les mois le deuxième jeudi à 18h00", "2026-03-12T18:00:00"),
+        ("tous les mois le deuxième jeudi à 09h00", "2026-04-09T09:00:00"),
+        ("tous les mois le troisième vendredi à 08h00", "2026-03-20T08:00:00"),
+        ("tous les mois le dernier lundi à 07h15", "2026-03-30T07:15:00"),
+        ("tous les mois le cinquième lundi à 09h00", "2026-03-30T09:00:00"),
+        ("le 2026-03-12 à 13h00, et tous les jours à 18h00", "2026-03-12T13:00:00"),
+        ("tous les jours à 18h00 sauf le jeudi, et tous les jours à 17h00", "2026-03-12T17:00:00"),
+        ("tous les jours à 18h00 sauf le vendredi, et le 2026-03-13 à 02h00", "2026-03-12T18:00:00"),
+        ("tous les ans le 03-12 à 12h30", "2026-03-12T12:30:00"),
+        ("tous les ans le 03-12 à 11h00", "2027-03-12T11:00:00"),
+        ("tous les ans le dernier dimanche d'octobre à 23h00", "2026-10-25T23:00:00"),
+    ]
+
+    for rule, expected_prefix in cases_fr:
+        en_rule = fr_to_en_rule(rule)
+        validate(en_rule, now=now, default_tz=tz)
+        got = next_occurrence(en_rule, now=now, default_tz=tz)
+        got_local = got.astimezone(ZoneInfo(tz)).replace(tzinfo=None).isoformat()
+        assert got_local.startswith(expected_prefix), (
+            f"\nRule: {rule}\nNow:  {now.isoformat()}\nGot:  {got.isoformat()} (local={got_local})\nExp:  {expected_prefix}..."
+        )
