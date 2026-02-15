@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recpyx"
+version = "0.1.0"
+description = "Pragmatic recurrence rule parser and next-occurrence engine"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "python-dateutil>=2.9.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["recpyx*", "dateutil*"]
