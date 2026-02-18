@@ -180,295 +180,213 @@ deterministic description that the engine understands.
 }
 ```
 
-## English Rule Specification (Supported Grammar)
+## Grammaire BNF complète des expressions acceptées par `next_occurrence`
 
-The following English rule shapes are accepted. They are *exact* patterns, so stick to the
-wording shown here.
+> `next_occurrence()` accepte une expression en **anglais** (grammaire native) ou en **français** (normalisée vers l'anglais avant parsing).
+> La grammaire ci-dessous décrit donc la forme canonique réellement reconnue par le parseur.
 
-### Base schedules
+### 1) Lexique
 
-1. **One-shot**
-   - `YYYY-MM-DD at HH:MM`
+```bnf
+<digit>         ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+<yyyy>          ::= <digit><digit><digit><digit>
+<mm>            ::= <digit><digit>
+<dd>            ::= <digit><digit>
+<hh>            ::= <digit> | <digit><digit>
+<min2>          ::= <digit><digit>
+<date>          ::= <yyyy> "-" <mm> "-" <dd>
+<month-day>     ::= <mm> "-" <dd>
+<time24>        ::= <hh> ":" <min2>
+<time12>        ::= <hh> [":" <min2>] ("am" | "pm")
+<time>          ::= <time24> | <time12>
+<timezone>      ::= <tz-token> "/" <tz-token>
+<tz-token>      ::= letter { letter | "_" }
+<int>           ::= <digit> { <digit> }
 
-2. **Every day / weekday**
-   - `every day at HH:MM`
-   - `every weekday at HH:MM`
-   - Multiple times: `every day at 08:00 and 18:30`
-
-3. **Specific weekdays**
-   - `every monday and thursday at 09:00`
-   - `every tuesday at 10:15`
-
-4. **Every N units (minutes/hours/days/weeks)**
-   - `every 2 hours`
-   - `every 3 days at 07:30`
-   - `every 2 weeks on monday at 08:30`
-   - `every 15 minutes on monday and friday at 09:00` (time list optional)
-
-5. **Hourly ranges**
-   - `every hour between 09:00 and 17:00`
-   - `every 2 hours between 08:00 and 18:00`
-
-6. **Step within day (daily/weekday)**
-   - `every day every 2 hours between 09:00 and 17:00`
-   - `every weekday every 30 minutes between 08:00 and 12:00`
-
-7. **Monthly rules**
-   - `every month on the 1st at 09:00`
-   - `every month on the 1st 15th at 09:00`
-   - `every month on the last day at 23:00`
-   - `every month on the first monday at 09:00`
-
-8. **Yearly rules**
-   - `every year on 03-12 at 12:30`
-   - `every year on the last sunday of october at 23:00`
-
-### Suffix clauses (may appear in any order)
-
-- **Date window**
-  - `between 2026-01-01 and 2026-03-31`
-  - `until 2026-12-31`
-
-- **Exceptions**
-  - `except monday` (weekday exclusion)
-  - `except 2026-03-13` (date exclusion)
-  - `except public holidays` (syntax accepted, engine raises at runtime)
-  - `except monday, 2026-03-13` (mixed list)
-
-- **Weekend shifts**
-  - `if weekend then next monday`
-  - `if weekend then next business day`
-
-### Multiple rules in one schedule
-
-Separate rules with `", and"` (comma + “and”):
-
-```
-every monday at 09:00, and every friday at 17:00
+<weekday>       ::= "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+<weekday-list>  ::= <weekday> { ("and" | ",") <weekday> }
+<month-name>    ::= "january" | "february" | "march" | "april" | "may" | "june" |
+                    "july" | "august" | "september" | "october" | "november" | "december"
+<ordinal>       ::= "first" | "second" | "third" | "fourth" | "fifth" | "last"
+<monthday>      ::= ("1".."31") ["st" | "nd" | "rd" | "th"]
+<monthday-list> ::= <monthday> { ("and" | ",") <monthday> }
+<time-list>     ::= <time> { ("and" | ",") <time> }
 ```
 
-The parser only splits on the literal `", and"` to avoid breaking weekday lists.
+### 2) Grammaire de haut niveau
 
-## French Rule Specification (Spécification complète - FR)
+```bnf
+<schedule>              ::= <rule-list> [<tz-suffix>]
+<rule-list>             ::= <rule> { ", and" <rule> }
+<tz-suffix>             ::= " in " <timezone>
 
-La grammaire française est normalisée en anglais avant parsing. Voici les formes acceptées en français.
-Utilisez ces formes exactes pour un résultat garanti.
-
-### Règles de base
-
-1. **One-shot**
-   - `le YYYY-MM-DD à HHhMM` ou `le YYYY-MM-DD à HH:MM`
-
-2. **Chaque jour / jours ouvrés**
-   - `tous les jours à 09h00`
-   - `tous les jours ouvrés à 09h00`
-   - Plusieurs horaires: `tous les jours à 08h00 et 18h30`
-
-3. **Jours spécifiques**
-   - `tous les lundis et jeudis à 09h00`
-   - `tous les mardis à 10h15`
-
-4. **Chaque N unités (minutes/heures/jours/semaines)**
-   - `toutes les 2 heures`
-   - `tous les 3 jours à 07h30`
-   - `toutes les 2 semaines lundi à 08h30`
-   - `toutes les 15 minutes lundi et vendredi à 09h00`
-
-5. **Plages horaires (heures)**
-   - `toutes les heures entre 09h00 et 17h00`
-   - `toutes les 2 heures entre 08h00 et 18h00`
-
-6. **Pas dans la journée (jour / jour ouvré)**
-   - `tous les jours, toutes les 2 heures entre 09h00 et 17h00`
-   - `tous les jours ouvrés, toutes les 30 minutes entre 08h00 et 12h00`
-
-7. **Règles mensuelles**
-   - `tous les mois le 1er à 09h00`
-   - `tous les mois le 1er et 15 à 09h00`
-   - `tous les mois le dernier jour à 23h00`
-   - `tous les mois le premier lundi à 09h00`
-
-8. **Règles annuelles**
-   - `tous les ans le 03-12 à 12h30`
-   - `tous les ans le dernier dimanche d'octobre à 23h00`
-
-### Clauses suffixes (dans n'importe quel ordre)
-
-- **Fenêtre de dates**
-  - `entre le 2026-01-01 et le 2026-03-31`
-  - `jusqu'au 2026-12-31`
-
-- **Exceptions**
-  - `sauf lundi` (exclusion d'un jour de semaine)
-  - `sauf 2026-03-13` (exclusion d'une date)
-  - `sauf jours fériés` (accepté, mais non implémenté par le moteur)
-  - `sauf lundi, 2026-03-13` (liste mixte)
-
-- **Report week-end**
-  - `si week-end alors lundi suivant`
-  - `si week-end alors prochain jour ouvré`
-
-### Plusieurs règles dans une même phrase
-
-Séparez les règles avec `", et"` (virgule + “et”) :
-
-```
-tous les lundis à 09h00, et tous les vendredis à 17h00
+<rule>                  ::= <base-rule> { <suffix-clause> }
+<suffix-clause>         ::= <date-window> | <until-window> | <except-clause> | <weekend-shift>
 ```
 
-## French Rule Specification (Complete Rules in EN)
+### 3) Règles de base
 
-The French layer is implemented by transforming French phrases into the exact English grammar above. The
-following points explain the full conversion behavior:
+```bnf
+<base-rule> ::= <oneshot>
+              | <every-day>
+              | <every-weekday>
+              | <every-weekday-list>
+              | <every-n-units>
+              | <hourly-between>
+              | <step-within-day>
+              | <monthly-rule>
+              | <yearly-date>
+              | <yearly-nth-weekday>
 
-- Times: `10h`, `10h00`, `08h30` → `10:00`, `10:00`, `08:30`.
-- Weekdays and month names are mapped into English equivalents.
-- `tous les` / `toutes les` → `every`.
-- `jour(s) ouvré(s)` → `weekday`.
-- `sauf` → `except`.
-- `entre le ... et le ...` → `between ... and ...` (date window).
-- `entre HHhMM et HHhMM` → `between HH:MM and HH:MM` (time window).
-- `jusqu'au YYYY-MM-DD` → `until YYYY-MM-DD`.
-- `si week-end alors lundi suivant` → `if weekend then next monday`.
-- `si week-end alors prochain jour ouvré` → `if weekend then next business day`.
-- `tous les mois le ...` → `every month on the ...`.
-- `tous les ans le ...` → `every year on ...`.
-- `le YYYY-MM-DD à HHhMM` → `YYYY-MM-DD at HH:MM` (one-shot).
-- `(... )` time zone suffix: `(Europe/Paris)` → `in Europe/Paris`.
+<oneshot>              ::= <date> " at " <time>
+<every-day>            ::= "every day at " <time-list>
+<every-weekday>        ::= "every weekday at " <time-list>
+<every-weekday-list>   ::= "every " <weekday-list> " at " <time-list>
 
-## Examples with Explanations (EN)
+<every-n-units>        ::= "every " <int> " " <unit> [" on " <weekday-list>] [" at " <time-list>]
+<unit>                 ::= "minutes" | "hours" | "days" | "weeks"
 
-Each example shows the accepted rule followed by a clear explanation of the behavior.
+<hourly-between>       ::= "every hour between " <time> " and " <time>
+                         | "every " <int> " hours between " <time> " and " <time>
 
-1. **`every weekday at 09:00`**
-   - Occurs Monday–Friday at 09:00 in the schedule time zone.
+<step-within-day>      ::= "every " <day-scope> " every " <int> " " <step-unit>
+                           " between " <time> " and " <time>
+<day-scope>            ::= "day" | "weekday"
+<step-unit>            ::= "hours" | "minutes"
 
-2. **`every day at 08:00 and 18:30`**
-   - Occurs twice per day, at 08:00 and 18:30.
+<monthly-rule>         ::= "every month on the " <monthly-selector> " at " <time>
+<monthly-selector>     ::= "last day"
+                         | <monthday-list>
+                         | <ordinal> " " <weekday>
 
-3. **`every monday and thursday at 09:00`**
-   - Occurs weekly on Mondays and Thursdays at 09:00.
+<yearly-date>          ::= "every year on " <month-day> " at " <time>
+<yearly-nth-weekday>   ::= "every year on the " <ordinal> " " <weekday>
+                           " of " <month-name> " at " <time>
+```
 
-4. **`every 2 weeks on monday at 08:30`**
-   - Occurs every two weeks, only on Monday, at 08:30.
+### 4) Suffixes (ordre libre)
 
-5. **`every 3 days at 07:30`**
-   - Occurs every three days at 07:30.
+```bnf
+<date-window>   ::= " between " <date> " and " <date>
+<until-window>  ::= " until " <date>
+<except-clause> ::= " except " <except-item-list>
+<except-item-list> ::= <except-item> { ("," | " ") <except-item> }
+<except-item>   ::= <weekday>
+                  | <date>
+                  | "public holidays"
+                  | "on public holidays"
+<weekend-shift> ::= " if weekend then next monday"
+                  | " if weekend then next business day"
+```
 
-6. **`every hour between 09:00 and 17:00`**
-   - Occurs every hour, but only within the inclusive window 09:00–17:00.
+## Exemples exhaustifs par cas de la grammaire
 
-7. **`every 2 hours between 08:00 and 18:00`**
-   - Occurs every two hours between 08:00 and 18:00, inclusive.
+### A. Cas `<schedule>` (règle simple, multi-règles, fuseau)
 
-8. **`every day every 2 hours between 09:00 and 17:00`**
-   - For each day, produces a sequence 09:00, 11:00, 13:00, 15:00, 17:00.
+- `every day at 09:00`
+- `every monday at 09:00, and every friday at 17:00`
+- `every day at 09:00 in Europe/Paris`
 
-9. **`every weekday every 30 minutes between 08:00 and 12:00`**
-   - On weekdays, produces 08:00, 08:30, 09:00... up to 12:00.
+### B. Cas `<oneshot>`
 
-10. **`every month on the last day at 23:00`**
-    - Occurs on the last calendar day of each month at 23:00.
+- `2026-03-13 at 10:00`
+- `2026-03-13 at 2pm`
 
-11. **`every month on the first monday at 09:00`**
-    - Occurs on the first Monday of each month at 09:00.
+### C. Cas `<every-day>` et `<every-weekday>`
 
-12. **`every year on 03-12 at 12:30`**
-    - Occurs every year on March 12th at 12:30.
+- `every day at 08:00`
+- `every day at 08:00 and 18:30`
+- `every weekday at 09:00`
+- `every weekday at 09:00 and 17:00`
 
-13. **`every year on the last sunday of october at 23:00`**
-    - Occurs on the last Sunday of October each year at 23:00.
+### D. Cas `<every-weekday-list>`
 
-14. **`2026-03-13 at 10:00`**
-    - One-shot occurrence on 2026-03-13 at 10:00 only.
+- `every monday at 09:00`
+- `every monday and thursday at 09:00`
+- `every monday, wednesday and friday at 09:00 and 18:00`
 
-15. **`every day at 10:00 except 2026-03-13`**
-    - Daily at 10:00, but skips the specific date 2026-03-13.
+### E. Cas `<every-n-units>`
 
-16. **`every weekday at 09:00 except monday`**
-    - Weekdays at 09:00, but Monday is excluded, so Tuesday–Friday only.
+- `every 15 minutes`
+- `every 2 hours`
+- `every 3 days at 07:30`
+- `every 2 weeks on monday`
+- `every 2 weeks on monday and friday at 08:30 and 18:30`
 
-17. **`every day at 09:00 between 2026-01-01 and 2026-01-31`**
-    - Daily at 09:00, but only within January 2026.
+### F. Cas `<hourly-between>`
 
-18. **`every day at 09:00 until 2026-01-31`**
-    - Daily at 09:00, but stops after 2026-01-31.
+- `every hour between 09:00 and 17:00`
+- `every 2 hours between 08:00 and 18:00`
 
-19. **`every month on the 1st at 09:00 if weekend then next monday`**
-    - Monthly on the 1st at 09:00; if that day is a weekend, shift to next Monday.
+### G. Cas `<step-within-day>`
 
-20. **`every monday at 09:00, and every friday at 17:00`**
-    - Two separate rules in one schedule: Mondays at 09:00 and Fridays at 17:00.
+- `every day every 2 hours between 09:00 and 17:00`
+- `every weekday every 30 minutes between 08:00 and 12:00`
 
-21. **`every day at 09:00 in America/New_York`**
-    - Same daily schedule, explicitly tied to the America/New_York time zone.
+### H. Cas `<monthly-rule>`
 
-## Exemples avec explications (FR)
+- `every month on the 1st at 09:00`
+- `every month on the 1st and 15th at 09:00`
+- `every month on the last day at 23:00`
+- `every month on the first monday at 09:00`
+- `every month on the last friday at 18:00`
 
-Chaque exemple contient la règle acceptée puis une explication claire.
+### I. Cas `<yearly-date>` et `<yearly-nth-weekday>`
 
-1. **`tous les jours ouvrés à 09h00`**
-   - Se produit du lundi au vendredi à 09h00 (fuseau horaire de la règle).
+- `every year on 03-12 at 12:30`
+- `every year on the last sunday of october at 23:00`
+- `every year on the first monday of january at 09:00`
 
-2. **`tous les jours à 08h00 et 18h30`**
-   - Deux occurrences par jour, à 08h00 et 18h30.
+### J. Cas `<date-window>`
 
-3. **`tous les lundis et jeudis à 09h00`**
-   - Une occurrence hebdomadaire les lundis et jeudis à 09h00.
+- `every day at 09:00 between 2026-01-01 and 2026-01-31`
+- `every month on the 1st at 09:00 between 2026-01-01 and 2026-12-31`
 
-4. **`toutes les 2 semaines lundi à 08h30`**
-   - Une occurrence toutes les deux semaines, le lundi, à 08h30.
+### K. Cas `<until-window>`
 
-5. **`tous les 3 jours à 07h30`**
-   - Une occurrence tous les trois jours à 07h30.
+- `every day at 09:00 until 2026-01-31`
+- `every 2 weeks on monday at 08:30 until 2026-12-31`
 
-6. **`toutes les heures entre 09h00 et 17h00`**
-   - Une occurrence chaque heure, dans la plage 09h00–17h00 (incluse).
+### L. Cas `<except-clause>`
 
-7. **`toutes les 2 heures entre 08h00 et 18h00`**
-   - Une occurrence toutes les deux heures entre 08h00 et 18h00.
+- `every day at 10:00 except monday`
+- `every day at 10:00 except 2026-03-13`
+- `every day at 10:00 except monday, 2026-03-13`
+- `every day at 10:00 except public holidays`
+- `every day at 10:00 except on public holidays`
 
-8. **`tous les jours, toutes les 2 heures entre 09h00 et 17h00`**
-   - Chaque jour, occurrences à 09h00, 11h00, 13h00, 15h00, 17h00.
+### M. Cas `<weekend-shift>`
 
-9. **`tous les jours ouvrés, toutes les 30 minutes entre 08h00 et 12h00`**
-   - En semaine, occurrences toutes les 30 minutes entre 08h00 et 12h00.
+- `every month on the 1st at 09:00 if weekend then next monday`
+- `every day at 09:00 if weekend then next business day`
 
-10. **`tous les mois le dernier jour à 23h00`**
-    - Occurrence le dernier jour de chaque mois à 23h00.
+### N. Combinaisons de suffixes (ordre libre)
 
-11. **`tous les mois le premier lundi à 09h00`**
-    - Occurrence le premier lundi de chaque mois à 09h00.
+- `every day at 09:00 except monday until 2026-06-30`
+- `every day at 09:00 until 2026-06-30 except monday`
+- `every month on the 1st at 09:00 between 2026-01-01 and 2026-12-31 if weekend then next monday`
+- `every month on the 1st at 09:00 if weekend then next monday between 2026-01-01 and 2026-12-31`
 
-12. **`tous les ans le 03-12 à 12h30`**
-    - Occurrence chaque année le 12 mars à 12h30.
+## Équivalents français (normalisés automatiquement)
 
-13. **`tous les ans le dernier dimanche d'octobre à 23h00`**
-    - Occurrence le dernier dimanche d'octobre chaque année à 23h00.
+`next_occurrence` détecte la langue, puis convertit le français vers la grammaire anglaise ci-dessus.
+Exemples de formes FR valides (1 exemple par famille) :
 
-14. **`le 2026-03-13 à 10h00`**
-    - Une occurrence unique le 13/03/2026 à 10h00.
-
-15. **`tous les jours à 10h00 sauf 2026-03-13`**
-    - Tous les jours à 10h00, sauf le 13/03/2026.
-
-16. **`tous les jours ouvrés à 09h00 sauf lundi`**
-    - Tous les jours ouvrés à 09h00, mais le lundi est exclu (donc mardi à vendredi).
-
-17. **`tous les jours à 09h00 entre le 2026-01-01 et le 2026-01-31`**
-    - Tous les jours à 09h00, uniquement en janvier 2026.
-
-18. **`tous les jours à 09h00 jusqu'au 2026-01-31`**
-    - Tous les jours à 09h00, arrêt après le 31/01/2026.
-
-19. **`tous les mois le 1er à 09h00 si week-end alors lundi suivant`**
-    - Le 1er de chaque mois à 09h00 ; si week-end, report au lundi suivant.
-
-20. **`tous les lundis à 09h00, et tous les vendredis à 17h00`**
-    - Deux règles distinctes : lundi 09h00 et vendredi 17h00.
-
-21. **`tous les jours à 09h00 (Europe/Paris)`**
-    - Règle quotidienne à 09h00 avec fuseau explicite Europe/Paris.
+- One-shot : `le 2026-03-13 à 10h00`
+- Quotidien : `tous les jours à 08h00 et 18h30`
+- Jours ouvrés : `tous les jours ouvrés à 09h00`
+- Jours nommés : `tous les lundis et jeudis à 09h00`
+- N unités : `toutes les 2 semaines lundi à 08h30`
+- Plage horaire : `toutes les heures entre 09h00 et 17h00`
+- Pas intrajournalier : `tous les jours, toutes les 2 heures entre 09h00 et 17h00`
+- Mensuel : `tous les mois le dernier jour à 23h00`
+- Annuel : `tous les ans le dernier dimanche d'octobre à 23h00`
+- Fenêtre dates : `tous les jours à 09h00 entre le 2026-01-01 et le 2026-01-31`
+- Until : `tous les jours à 09h00 jusqu'au 2026-01-31`
+- Exceptions : `tous les jours à 10h00 sauf lundi, 2026-03-13`
+- Report week-end : `tous les mois le 1er à 09h00 si week-end alors lundi suivant`
+- Fuseau : `tous les jours à 09h00 (Europe/Paris)`
+- Multi-règles : `tous les lundis à 09h00, et tous les vendredis à 17h00`
 
 ## Notes & Limitations
 
