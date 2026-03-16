@@ -145,6 +145,7 @@ def fr_to_en_rule(fr_rule: str) -> str:
 
     # frequency base phrases
     s = re.sub(r"\b(tous|toutes)\s+les\b", "every", s, flags=re.I)
+    s = re.sub(r"\bchaque\b", "every", s, flags=re.I)
     s = re.sub(r"\bjour\s+ouvr[eé]s\b", "weekday", s, flags=re.I)
     s = re.sub(r"\bjours\s+ouvr[eé]s\b", "weekday", s, flags=re.I)
     s = re.sub(r"\bjours\b", "days", s, flags=re.I)
@@ -170,6 +171,7 @@ def fr_to_en_rule(fr_rule: str) -> str:
 
     # singularize after FR->EN unit replacements
     s = re.sub(r"\bevery\s+years\b", "every year", s, flags=re.I)
+    s = re.sub(r"\bevery\s+ann[eé]e\b", "every year", s, flags=re.I)
 
     # ordinal day-of-month: "1er" -> "1st"
     s = re.sub(r"\b1er\b", "1st", s, flags=re.I)

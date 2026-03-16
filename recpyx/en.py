@@ -247,6 +247,21 @@ def parse_rule(text: str) -> IRRule:
         r.weekend_shift = weekend_shift
         return r
 
+    # ---- every year (without date) ----
+    m = re.fullmatch(r"every\s+year\b(?:\s+at\s+(.+))?", s_lower)
+    if m:
+        at_part = m.group(1)
+        times: List[time] = []
+        if at_part:
+            at_part = at_part.replace(",", " ")
+            chunks = [c for c in at_part.split() if c.lower() not in {"and"}]
+            times = [parse_time(c) for c in chunks]
+        r = IRRule(type="rrule", freq="yearly", interval=1, times=times)
+        r.window_date = window if (window.start or window.end or window.until) else None
+        r.except_ = ex
+        r.weekend_shift = weekend_shift
+        return r
+
     # ---- step within day: every day/weekday every N hours/minutes between t1 and t2 ----
     m = re.fullmatch(
         r"every\s+(day|weekday)\s+every\s+(\d+)\s+(hours|minutes)\s+between\s+(.+?)\s+and\s+(.+)",
@@ -402,6 +417,21 @@ def parse_rule(text: str) -> IRRule:
         at = parse_time(m.group(4))
         r = IRRule(type="rrule", freq="yearly", interval=1,
                    bymonth=[mm], byweekday=[wd], bysetpos=[pos], times=[at])
+        r.window_date = window if (window.start or window.end or window.until) else None
+        r.except_ = ex
+        r.weekend_shift = weekend_shift
+        return r
+
+    # ---- every month (without date) ----
+    m = re.fullmatch(r"every\s+month\b(?:\s+at\s+(.+))?", s_lower)
+    if m:
+        at_part = m.group(1)
+        times: List[time] = []
+        if at_part:
+            at_part = at_part.replace(",", " ")
+            chunks = [c for c in at_part.split() if c.lower() not in {"and"}]
+            times = [parse_time(c) for c in chunks]
+        r = IRRule(type="rrule", freq="monthly", interval=1, times=times)
         r.window_date = window if (window.start or window.end or window.until) else None
         r.except_ = ex
         r.weekend_shift = weekend_shift
