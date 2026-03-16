@@ -377,6 +377,21 @@ def parse_rule(text: str) -> IRRule:
         r.weekend_shift = weekend_shift
         return r
 
+    # ---- every day (without time) ----
+    m = re.fullmatch(r"every\s+day\b(?:\s+at\s+(.+))?", s_lower)
+    if m:
+        at_part = m.group(1)
+        times: List[time] = []
+        if at_part:
+            at_part = at_part.replace(",", " ")
+            chunks = [c for c in at_part.split() if c.lower() not in {"and"}]
+            times = [parse_time(c) for c in chunks]
+        r = IRRule(type="rrule", freq="daily", interval=1, times=times)
+        r.window_date = window if (window.start or window.end or window.until) else None
+        r.except_ = ex
+        r.weekend_shift = weekend_shift
+        return r
+
     # ---- every <weekday list> at ... ----
     m = re.fullmatch(r"every\s+(.+?)\s+at\s+(.+)", s_lower)
     if m:

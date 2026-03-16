@@ -138,6 +138,8 @@ def _build_rruleset(rule: IRRule, tzinfo: ZoneInfo, now: datetime, w_start: Opti
         for t in rule.times:
             add_rr(dtstart.replace(hour=t.hour, minute=t.minute), hour=t.hour, minute=t.minute)
     else:
+        if rule.freq == "daily":
+            dtstart = dtstart.replace(hour=0, minute=0)
         add_rr(dtstart)
 
     return rs

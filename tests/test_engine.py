@@ -74,6 +74,7 @@ CASES_EN = [
     # --- Yearly ---
     ("every year on 03-14 at 10:00", "2026-03-14T10:00:00"),
     ("every year on 03-01 at 10:00", "2027-03-01T10:00:00"),
+    ("every day", "2026-03-13T00:00:00"),
     ("every year", "2027-03-12T00:00:00"),
     ("every day except thursday at 18:00", "2026-03-13T18:00:00"),
     ("every day except friday at 18:00", "2026-03-12T18:00:00"),
@@ -263,6 +264,7 @@ CASES_FR = [
     ("tous les ans le 03-14 à 10h00", "2026-03-14T10:00:00"),
     ("tous les ans le 03-01 à 10h00", "2027-03-01T10:00:00"),
     ("tous les ans", "2027-03-12T00:00:00"),
+    ("chaque jour", "2026-03-13T00:00:00"),
     ("chaque année", "2027-03-12T00:00:00"),
     ("tous les jours sauf le jeudi à 18h00", "2026-03-13T18:00:00"),
     ("tous les jours sauf le vendredi à 18h00", "2026-03-12T18:00:00"),
