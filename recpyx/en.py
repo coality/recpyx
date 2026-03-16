@@ -395,6 +395,40 @@ def parse_rule(text: str) -> IRRule:
             r.weekend_shift = weekend_shift
             return r
 
+    # ---- yearly: every year on the last sunday of march and october at 23:00 ----
+    m = re.fullmatch(
+        r"every\s+year\s+on\s+the\s+"
+        r"(first|second|third|fourth|fifth|last)\s+"
+        r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
+        r"of\s+"
+        r"(.+?)\s+"
+        r"at\s+(.+)",
+        s_lower,
+    )
+    if m:
+        month_map = {
+            "january": 1, "february": 2, "march": 3, "april": 4,
+            "may": 5, "june": 6, "july": 7, "august": 8,
+            "september": 9, "october": 10, "november": 11, "december": 12,
+        }
+        pos = ORDINAL[m.group(1)]
+        wd = WEEKDAY_MAP[m.group(2)]
+        months_str = m.group(3).strip()
+        months = []
+        for month_name in re.split(r"\s+and\s+", months_str):
+            month_name = month_name.strip().lower()
+            if month_name in month_map:
+                months.append(month_map[month_name])
+        if not months:
+            raise ValueError(f"Unsupported rule: {text!r}")
+        at = parse_time(m.group(4))
+        r = IRRule(type="rrule", freq="yearly", interval=1,
+                   bymonth=months, byweekday=[wd], bysetpos=[pos], times=[at])
+        r.window_date = window if (window.start or window.end or window.until) else None
+        r.except_ = ex
+        r.weekend_shift = weekend_shift
+        return r
+
     # ---- yearly: every year on the last sunday of october at 23:00 ----
     m = re.fullmatch(
         r"every\s+year\s+on\s+the\s+"

@@ -217,6 +217,7 @@ CASES_EN = [
     ("every year on 03-12 at 12:30", "2026-03-12T12:30:00"),
     ("every year on 03-12 at 11:00", "2027-03-12T11:00:00"),
     ("every year on the last sunday of october at 23:00", "2026-10-25T23:00:00"),
+    ("every year on the last sunday of march and october at 23:00", "2026-03-29T23:00:00"),
 ]
 
 CASES_FR = [
@@ -354,6 +355,7 @@ CASES_FR = [
     ("tous les ans le 03-12 à 12h30", "2026-03-12T12:30:00"),
     ("tous les ans le 03-12 à 11h00", "2027-03-12T11:00:00"),
     ("tous les ans le dernier dimanche d'octobre à 23h00", "2026-10-25T23:00:00"),
+    ("tous les ans le dernier dimanche de mars et octobre à 23h00", "2026-03-29T23:00:00"),
 ]
 
 INVALID_RULES = [

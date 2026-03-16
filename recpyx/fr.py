@@ -208,6 +208,10 @@ def fr_to_en_rule(fr_rule: str) -> str:
         s = re.sub(rf"\bd[\\'’]{fr_m}\b", f"of {en_m}", s, flags=re.I)
         s = re.sub(rf"\bde\s+{fr_m}\b", f"of {en_m}", s, flags=re.I)
 
+    # french months with "and" connector: "de mars et octobre" -> "of march and october"
+    for fr_m, en_m in month_map.items():
+        s = re.sub(rf"\bde\s+{fr_m}\s+et\s+", f"of {en_m} and ", s, flags=re.I)
+
     # ensure "every year on the <ordinal> <weekday> of <month>"
     s = re.sub(
         r"\bevery\s+year\s+on\s+(first|second|third|fourth|fifth|last)\b",
@@ -218,6 +222,10 @@ def fr_to_en_rule(fr_rule: str) -> str:
 
     # connectors: "et" between weekdays / times -> "and"
     s = re.sub(r"\b(et)\b", "and", s, flags=re.I)
+
+    # convert remaining french months that follow "and"
+    for fr_m, en_m in month_map.items():
+        s = re.sub(rf"\band\s+{fr_m}\b", f"and {en_m}", s, flags=re.I)
 
     # "sauf" -> "except"
     s = re.sub(r"\bsauf\b", "except", s, flags=re.I)
