@@ -321,6 +321,23 @@ def parse_rule(text: str) -> IRRule:
         r.weekend_shift = weekend_shift
         return r
 
+    # ---- every minute/hour (singular, without number) ----
+    m = re.fullmatch(r"every\s+(minute|hour)(?:\s+at\s+(.+))?", s_lower)
+    if m:
+        unit = m.group(1)
+        freq = {"minute": "minutely", "hour": "hourly"}[unit]
+        times: List[time] = []
+        at_part = m.group(2)
+        if at_part:
+            at_part = at_part.replace(",", " ")
+            chunks = [c for c in at_part.split() if c.lower() not in {"and"}]
+            times = [parse_time(c) for c in chunks]
+        r = IRRule(type="rrule", freq=freq, interval=1, times=times)
+        r.window_date = window if (window.start or window.end or window.until) else None
+        r.except_ = ex
+        r.weekend_shift = weekend_shift
+        return r
+
     # ---- every weekday at ... ----
     m = re.fullmatch(r"every\s+weekday\s+at\s+(.+)", s_lower)
     if m:

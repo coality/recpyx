@@ -185,6 +185,7 @@ CASES_EN = [
     # --- Minutes / hours pure intervals ---
     ("every 15 minutes", "2026-03-12T12:15:00"),
     ("every 45 minutes", "2026-03-12T12:45:00"),
+    ("every minute", "2026-03-12T12:01:00"),
     ("every 6 hours", "2026-03-12T18:00:00"),
     ("every 6 hours except thursday", "2026-03-13T00:00:00"),
 
@@ -326,6 +327,7 @@ CASES_FR = [
     ("toutes les 6 heures entre 00h00 et 23h00", "2026-03-12T18:00:00"),
     ("toutes les 15 minutes", "2026-03-12T12:15:00"),
     ("toutes les 45 minutes", "2026-03-12T12:45:00"),
+    ("toutes les minutes", "2026-03-12T12:01:00"),
     ("toutes les 6 heures", "2026-03-12T18:00:00"),
     ("toutes les 6 heures sauf le jeudi", "2026-03-13T00:00:00"),
     ("tous les mois le 12 à 12h30", "2026-03-12T12:30:00"),
