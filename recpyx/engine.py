@@ -28,6 +28,17 @@ from .en import IRSchedule, IRRule, IRWindowDate, IRBetweenTime, IRStep
 class InvalidRuleError(ValueError):
     pass
 
+def _reject_unsupported(sched: IRSchedule, text: str) -> None:
+    # Public-holidays exclusion is parseable ("... except on public holidays" /
+    # "... sauf les jours fériés") but the engine has no holiday data source, so it
+    # cannot be honoured. Reject it up front with a clear, catchable error instead of
+    # crashing later with a RuntimeError (EN) or silently ignoring it (FR).
+    for r in sched.rules:
+        if r.except_.holidays.enabled:
+            raise InvalidRuleError(
+                f"Public holidays exclusion is not supported yet for rule '{text}'"
+            )
+
 FREQ_MAP = {
     "minutely": MINUTELY,
     "hourly": HOURLY,
@@ -145,9 +156,14 @@ def _build_rruleset(rule: IRRule, tzinfo: ZoneInfo, now: datetime, w_start: Opti
     return rs
 
 def _step_to_timedelta(step: IRStep) -> timedelta:
+    # A non-positive step never advances -> _expand_step_within_day would loop forever.
     if step.hours is not None:
+        if step.hours < 1:
+            raise InvalidRuleError("Invalid step: hours must be >= 1")
         return timedelta(hours=step.hours)
     if step.minutes is not None:
+        if step.minutes < 1:
+            raise InvalidRuleError("Invalid step: minutes must be >= 1")
         return timedelta(minutes=step.minutes)
     raise ValueError("Invalid step: missing hours/minutes")
 
@@ -167,6 +183,9 @@ def _expand_step_within_day(base_dt: datetime, rule: IRRule, tzinfo: ZoneInfo, a
 
 def next_occurrence(text: str, now: Optional[datetime] = None, default_tz: str = "Europe/Paris") -> datetime:
     sched: IRSchedule = parse_schedule(text, default_tz=default_tz)
+    if not sched.rules:
+        raise InvalidRuleError(f"Empty or unsupported rule: {text!r}")
+    _reject_unsupported(sched, text)
     tzinfo = ZoneInfo(sched.tz)
 
     now = now or datetime.now(tzinfo)
@@ -187,6 +206,11 @@ def next_occurrence(text: str, now: Optional[datetime] = None, default_tz: str =
             if dt > now and not _excluded(dt, r, tzinfo):
                 candidates.append(dt)
             continue
+
+        # Non-positive interval makes dateutil.rrule spin forever; reject defensively
+        # (the EN/FR parsers already guard this, but a hand-built IR could bypass them).
+        if (r.interval or 0) < 1:
+            raise InvalidRuleError(f"Invalid interval (must be >= 1) for rule '{text}'")
 
         rs = _build_rruleset(r, tzinfo, now, w_start)
 
@@ -236,6 +260,9 @@ def next_occurrence(text: str, now: Optional[datetime] = None, default_tz: str =
 
 def validate(rule_text: str, now: Optional[datetime] = None, default_tz: str = "Europe/Paris") -> None:
     sched: IRSchedule = parse_schedule(rule_text, default_tz=default_tz)
+    if not sched.rules:
+        raise InvalidRuleError(f"Empty or unsupported rule: {rule_text!r}")
+    _reject_unsupported(sched, rule_text)
     tzinfo = ZoneInfo(sched.tz)
 
     now = now or datetime.now(tzinfo)

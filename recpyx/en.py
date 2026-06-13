@@ -71,6 +71,14 @@ def parse_date(s: str) -> date:
         raise ValueError(f"Invalid date: {s!r} (expected YYYY-MM-DD)")
     return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
 
+def _require_positive(n: int, text: str) -> int:
+    # An interval or step of 0 (or less) makes the recurrence engine spin forever
+    # (dateutil.rrule never advances; the step-within-day loop never terminates).
+    # Reject it early with a clear error instead of hanging.
+    if n < 1:
+        raise ValueError(f"Invalid interval/step (must be >= 1): {text!r}")
+    return n
+
 def parse_weekday_list(text: str) -> List[str]:
     t = text.strip().lower().replace(",", " ")
     words = [w for w in t.split() if w not in {"and"}]
@@ -269,7 +277,7 @@ def parse_rule(text: str) -> IRRule:
     )
     if m:
         base = m.group(1)
-        n = int(m.group(2))
+        n = _require_positive(int(m.group(2)), text)
         unit = m.group(3)
         t1 = parse_time(m.group(4))
         t2 = parse_time(m.group(5))
@@ -285,7 +293,7 @@ def parse_rule(text: str) -> IRRule:
     # ---- every N hours between t1 and t2 ----
     m = re.fullmatch(r"every\s+(\d+)\s+hours\s+between\s+(.+?)\s+and\s+(.+)", s_lower)
     if m:
-        n = int(m.group(1))
+        n = _require_positive(int(m.group(1)), text)
         t1 = parse_time(m.group(2))
         t2 = parse_time(m.group(3))
         r = IRRule(type="rrule", freq="hourly", interval=n, between_time=IRBetweenTime(t1, t2))
@@ -311,7 +319,7 @@ def parse_rule(text: str) -> IRRule:
         s_lower,
     )
     if m:
-        n = int(m.group(1))
+        n = _require_positive(int(m.group(1)), text)
         unit = m.group(2)
         on_part = (m.group(3) or "").strip()
         at_part = (m.group(4) or "").strip()

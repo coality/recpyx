@@ -97,6 +97,10 @@ def fr_to_en_rule(fr_rule: str) -> str:
         s = s[: m.start()].strip()
         tz_suffix = f" in {tz}"
 
+    # "(les) jours fériés" -> "public holidays" BEFORE the generic jours->days rule
+    # (otherwise "fériés" is stranded and the holiday exception is silently dropped).
+    s = re.sub(r"\b(?:les\s+|le\s+)?jours?\s+f[ée]ri[ée]s?\b", "public holidays", s, flags=re.I)
+
     s = _fr_time_to_en(s)
     s = re.sub(r"\bà\b", " a ", s)
     # do NOT split "au" (would break words like "sauf")
